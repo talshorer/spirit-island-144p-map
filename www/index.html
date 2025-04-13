@@ -2,14 +2,60 @@
 <html>
 
 <head>
-    <meta charset="utf-8">
-    <title>Wasm template Rust</title>
+  <meta charset="utf-8">
+  <title>Spirit Island 144 Player Map</title>
 </head>
 
-<body>
+<!-- <body>
+    <canvas id="mygame-canvas" width="1280" height="720"></canvas>
     <script src="./bootstrap.js"></script>
     <noscript>This page contains webassembly and javascript content, please enable javascript in your
         browser.</noscript>
+</body> -->
+
+<body style="margin: 0px;">
+  <!-- XXX-tals is all this useful?! START -->
+  <style>
+    body {
+      height: 100%;
+      width: 100%;
+    }
+
+    canvas {
+      background-color: #000000;
+      display: block;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+  <canvas id="mygame-canvas"></canvas>
+  <script type="module">
+    import init from "./pkg/spirit_island_144p_map.js"
+
+    var canvas = document.getElementById("mygame-canvas");
+
+    function fitCanvas() {
+      cnavas.width = screen.innerWidth;
+      cnavas.height = screen.innerHeight;
+    }
+
+    screen.addEventListener('resize', fitCanvas);
+
+    // XXX-tals is all this useful?! END
+
+    init()
+      .then((wasm) => wasm.app())
+      .catch((error) => {
+        if (!error.message.startsWith("Using exceptions for control flow, don't mind me. This isn't actually an error!")) {
+          throw error;
+        }
+      });
+  </script>
 </body>
 
 </html>
