@@ -156,26 +156,23 @@ fn setup_sidebar(
                         });
                 }
             });
-        parent.spawn((
-            Node {
-                min_height: Val::Px(MINIMAP_PX),
-                max_height: Val::Px(MINIMAP_PX),
-                border: BORDER,
-                ..default()
-            },
-            Minimap,
-            BorderColor(RED.into()),
-        ));
-        parent.spawn((
-            Node {
-                min_height: Val::Px(MINIMAP_PX),
-                max_height: Val::Px(MINIMAP_PX),
-                border: BORDER,
-                ..default()
-            },
-            Minimap,
-            BorderColor(RED.into()),
-        ));
+
+        let mut spawn_minimap = |asset| {
+            parent
+                .spawn((
+                    Node {
+                        min_height: Val::Px(MINIMAP_PX),
+                        max_height: Val::Px(MINIMAP_PX),
+                        border: BORDER,
+                        ..default()
+                    },
+                    Minimap,
+                    BorderColor(RED.into()),
+                ))
+                .with_child(ImageNode::new(asset_server.load(asset)));
+        };
+        spawn_minimap("ContinentBlue.png");
+        spawn_minimap("ContinentOrange.png");
     });
 }
 
