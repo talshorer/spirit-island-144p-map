@@ -234,7 +234,7 @@ fn setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
                 border: BORDER,
                 ..default()
             },
-            BorderColor(RED.into()),
+            BorderColor(GREEN.into()),
         ))
         .with_children(|parent| {
             parent.spawn((
@@ -292,7 +292,6 @@ fn on_game_response(trigger: Trigger<ReqwestResponseEvent>, mut client: BevyReqw
                 .map(|line| &line[..line.find("\" ").unwrap()])
         })
         .unwrap();
-    info!("resource: {imgsrc:?}",);
     let url = BASE_URL.to_string() + imgsrc;
     let req = client.get(&url).build().unwrap();
     client.send(req).on_response(on_img_response);
