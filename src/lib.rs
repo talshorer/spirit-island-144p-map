@@ -1,12 +1,17 @@
 use bevy::{
+    asset::RenderAssetUsages,
     color::palettes::css::{GREEN, RED},
+    image::{CompressedImageFormats, ImageSampler, ImageType},
     input::mouse::{MouseScrollUnit, MouseWheel},
     picking::focus::HoverMap,
     prelude::*,
     winit::WinitSettings,
 };
+use bevy_mod_reqwest::{BevyReqwest, ReqwestPlugin, ReqwestResponseEvent};
 use strum::IntoEnumIterator;
 use wasm_bindgen::prelude::*;
+
+const BASE_URL: &str = "https://api.cors.lol/?url=https://si.bitcrafter.net";
 
 const MINIMAP_PX: f32 = 300.0;
 
@@ -93,6 +98,41 @@ impl Islet {
             Islet::Robot => "🤖",
         }
     }
+
+    fn bitcrafter_uuid(&self) -> &str {
+        match self {
+            Islet::Cactus => "c93a3401-57c2-4f82-91e7-84453cea5c44",
+            Islet::Cheese => "39d059ee-d8b6-4eca-8f83-e39e418921eb",
+            Islet::Moon => "9ce0657c-ab9d-42c1-b48a-ee86ddd49fbf",
+            Islet::Butterfly => "9291ed98-b15c-464c-ae58-a206751e85f1",
+            Islet::Ghost => "1e5881ce-834d-488e-b3a9-884dcbbac257",
+            Islet::Puzzle => "c79ad3f5-8836-4c11-8888-e34a0968f31f",
+            Islet::Rat => "8ff037d8-2f40-4b56-8526-daa82310fd20",
+            Islet::Snake => "698c01fd-36af-4e5b-b689-0ece85be74f3",
+            Islet::Infinity => "c212aa05-8394-44eb-bb59-52bc54c64920",
+            Islet::Mauritius => "172d4b18-c734-495a-b456-3d1a2b4cf6f1",
+            Islet::Football => "36b43f3b-4ac9-4931-af01-205a0dd51615",
+            Islet::Seedling => "eb617149-9229-4212-91ce-6ee760b23325",
+            Islet::Sunglasses => todo!(),
+            Islet::Island => todo!(),
+            Islet::Love => todo!(),
+            Islet::Books => "c27f4831-d688-47c4-ac8b-f092ea527e8c",
+            Islet::Banana => "9c07308b-a526-4276-b477-9ec6f0f11a24",
+            Islet::Wolf => "fe482166-68c4-4a84-a6f3-03a9ef47bcd4",
+            Islet::Pizza => "e7264e57-7f5d-47b4-8975-b7c1d801ead8",
+            Islet::Hamburger => "7e8bbce0-9fcb-49b8-8e2a-ebe75d3e35c6",
+            Islet::Phoenix => "58c681c0-a806-41d9-968a-d46b45b56e8c",
+            Islet::Balloon => "22787c21-a6e7-4df8-9032-0a0f9dc60d25",
+            Islet::Bagel => "3b7e540b-cfea-48d1-8ce2-3e2a52ba9344",
+            Islet::Cowboy => "b16152f5-cc8c-45ec-8eb2-7941f4b59792",
+            Islet::Cookie => "1f8732fd-13c1-471b-b5e8-691e574e3445",
+            Islet::Dragon => "2a5e6973-217c-45ef-9218-e23d6d488839",
+            Islet::Mountain => "cf7a95fd-d323-4a73-b8fa-eda66b10dd64",
+            Islet::Sheep => todo!(),
+            Islet::Lightning => todo!(),
+            Islet::Robot => todo!(),
+        }
+    }
 }
 
 #[derive(Component)]
@@ -176,7 +216,7 @@ fn setup_sidebar(
     });
 }
 
-fn setup_screen(mut commands: Commands) {
+fn setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2d);
     commands
         .spawn((
@@ -206,8 +246,55 @@ fn setup_screen(mut commands: Commands) {
                 },
                 BorderColor(RED.into()),
                 TtsDisplay,
+                ImageNode::new(asset_server.load("bigmap.png")),
             ));
         });
+}
+
+fn on_img_response(
+    trigger: Trigger<ReqwestResponseEvent>,
+    mut tts_display_query: Query<(&mut ImageNode, &TtsDisplay)>,
+    mut images: ResMut<Assets<Image>>,
+) {
+    let response = trigger.event();
+    let data = response.body().iter().as_slice();
+    let (mut image_node, _) = tts_display_query.single_mut();
+    image_node.image = images.add(
+        Image::from_buffer(
+            data,
+            ImageType::Format(ImageFormat::Png),
+            CompressedImageFormats::all(),
+            false,
+            ImageSampler::Default,
+            RenderAssetUsages::default(),
+        )
+        .unwrap(),
+    );
+}
+
+fn on_game_response(trigger: Trigger<ReqwestResponseEvent>, mut client: BevyReqwest) {
+    const SEARCH_FOR: &str = "<img src=\"";
+
+    let response = trigger.event();
+    let data = response.as_str().unwrap();
+    let imgsrc = data
+        .split("\n")
+        .find_map(|line| {
+            line.find(SEARCH_FOR)
+                .map(|idx| &line[(idx + SEARCH_FOR.len())..])
+                .map(|line| &line[..line.find("\" ").unwrap()])
+        })
+        .unwrap();
+    info!("resource: {imgsrc:?}",);
+    let url = BASE_URL.to_string() + imgsrc;
+    let req = client.get(&url).build().unwrap();
+    client.send(req).on_response(on_img_response);
+}
+
+fn get_islet_image(client: &mut BevyReqwest, islet: Islet) {
+    let url = BASE_URL.to_string() + "/game/" + islet.bitcrafter_uuid();
+    let req = client.get(&url).build().unwrap();
+    client.send(req).on_response(on_game_response);
 }
 
 fn islet_button_system(
@@ -218,6 +305,7 @@ fn islet_button_system(
     children_query: Query<&Children>,
     mut text_color_query: Query<&mut TextColor>,
     mut selected_islet: ResMut<SelectedIslet>,
+    mut client: BevyReqwest,
 ) {
     const COLOR_SELECTED: Color = Color::Srgba(RED);
     const COLOR_HOVERED: Color = Color::Srgba(GREEN);
@@ -248,6 +336,7 @@ fn islet_button_system(
                         islet: select_islet.0,
                         entity,
                     });
+                    get_islet_image(&mut client, select_islet.0);
                     COLOR_SELECTED
                 }
                 Interaction::Hovered => COLOR_HOVERED,
@@ -291,6 +380,7 @@ pub fn app() {
             }),
             ..default()
         }))
+        .add_plugins(ReqwestPlugin::default())
         .insert_resource(WinitSettings::desktop_app())
         .insert_resource(SelectedIslet(None))
         .add_systems(Startup, setup_screen)
