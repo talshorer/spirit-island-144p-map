@@ -6,15 +6,7 @@
   <title>Spirit Island 144 Player Map</title>
 </head>
 
-<!-- <body>
-    <canvas id="mygame-canvas" width="1280" height="720"></canvas>
-    <script src="./bootstrap.js"></script>
-    <noscript>This page contains webassembly and javascript content, please enable javascript in your
-        browser.</noscript>
-</body> -->
-
 <body style="margin: 0px;">
-  <!-- XXX-tals is all this useful?! START -->
   <style>
     body {
       height: 100%;
@@ -45,8 +37,6 @@
     }
 
     screen.addEventListener('resize', fitCanvas);
-
-    // XXX-tals is all this useful?! END
 
     init()
       .then((wasm) => wasm.app())
