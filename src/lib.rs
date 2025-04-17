@@ -1,3 +1,5 @@
+mod asset_json5;
+
 use bevy::{
     asset::RenderAssetUsages,
     color::palettes::css::{GREEN, RED},
@@ -8,14 +10,25 @@ use bevy::{
     winit::WinitSettings,
 };
 use bevy_mod_reqwest::{BevyReqwest, ReqwestPlugin, ReqwestResponseEvent};
+use serde::Deserialize;
 use strum::IntoEnumIterator;
 use wasm_bindgen::prelude::*;
 
-const BASE_URL: &str = "https://api.cors.lol/?url=https://si.bitcrafter.net";
+use asset_json5::Json5AssetLoader;
+
+#[derive(Asset, TypePath, Deserialize)]
+struct Config {
+    pub(crate) base_url: String,
+    border_px: f32,
+}
+
+impl Config {
+    fn border(&self) -> UiRect {
+        UiRect::all(Val::Px(self.border_px))
+    }
+}
 
 const MINIMAP_PX: f32 = 300.0;
-
-const BORDER: UiRect = UiRect::all(Val::Px(1.0));
 
 #[derive(Component)]
 struct Sidebar;
@@ -153,10 +166,33 @@ struct SelectedIsletInner {
 #[derive(Resource)]
 struct SelectedIslet(Option<SelectedIsletInner>);
 
+#[derive(Resource)]
+struct ConfigHandle(Handle<Config>);
+
+#[derive(Resource)]
+struct ConfigRes(Config);
+
+fn load_config(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.insert_resource(ConfigHandle(asset_server.load("main.cfg.json5")));
+}
+
+fn wait_for_config(
+    mut commands: Commands,
+    config_handle: Res<ConfigHandle>,
+    mut configs: ResMut<Assets<Config>>,
+    mut state: ResMut<NextState<AppState>>,
+) {
+    if let Some(config) = configs.remove(config_handle.0.id()) {
+        commands.insert_resource(ConfigRes(config));
+        state.set(AppState::App);
+    }
+}
+
 fn setup_sidebar(
     mut commands: Commands,
     mut query: Query<(Entity, &mut Sidebar)>,
     asset_server: Res<AssetServer>,
+    config: Res<ConfigRes>,
 ) {
     const DONT_BLOCK_LOWER: PickingBehavior = PickingBehavior {
         should_block_lower: false,
@@ -172,7 +208,7 @@ fn setup_sidebar(
                     align_self: AlignSelf::Stretch,
                     flex_direction: FlexDirection::Column,
                     overflow: Overflow::scroll_y(),
-                    border: BORDER,
+                    border: config.0.border(),
                     ..default()
                 },
                 BorderColor(RED.into()),
@@ -210,7 +246,7 @@ fn setup_sidebar(
                     Node {
                         min_height: Val::Px(MINIMAP_PX),
                         max_height: Val::Px(MINIMAP_PX),
-                        border: BORDER,
+                        border: config.0.border(),
                         ..default()
                     },
                     Minimap,
@@ -223,7 +259,7 @@ fn setup_sidebar(
     });
 }
 
-fn setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup_screen(mut commands: Commands, asset_server: Res<AssetServer>, config: Res<ConfigRes>) {
     commands.spawn(Camera2d);
     commands
         .spawn((
@@ -231,7 +267,7 @@ fn setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),
                 flex_direction: FlexDirection::Row,
-                border: BORDER,
+                border: config.0.border(),
                 ..default()
             },
             BorderColor(GREEN.into()),
@@ -248,7 +284,7 @@ fn setup_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
             ));
             parent.spawn((
                 Node {
-                    border: BORDER,
+                    border: config.0.border(),
                     ..default()
                 },
                 BorderColor(RED.into()),
@@ -279,7 +315,11 @@ fn on_img_response(
     );
 }
 
-fn on_game_response(trigger: Trigger<ReqwestResponseEvent>, mut client: BevyReqwest) {
+fn on_game_response(
+    trigger: Trigger<ReqwestResponseEvent>,
+    mut client: BevyReqwest,
+    config: Res<ConfigRes>,
+) {
     const SEARCH_FOR: &str = "<img src=\"";
 
     let response = trigger.event();
@@ -292,17 +332,17 @@ fn on_game_response(trigger: Trigger<ReqwestResponseEvent>, mut client: BevyReqw
                 .map(|line| &line[..line.find("\" ").unwrap()])
         })
         .unwrap();
-    let url = BASE_URL.to_string() + imgsrc;
+    let url = config.0.base_url.clone() + imgsrc;
     let req = client.get(&url).build().unwrap();
     client.send(req).on_response(on_img_response);
 }
 
-fn get_islet_image(client: &mut BevyReqwest, islet: Islet) {
+fn get_islet_image(config: &Config, client: &mut BevyReqwest, islet: Islet) {
     let uuid = match islet.screenshot_method() {
         ScreenshotMethod::Bitcrafter(uuid) => uuid,
         ScreenshotMethod::AbandonedIslet => return,
     };
-    let url = BASE_URL.to_string() + "/game/" + uuid;
+    let url = config.base_url.clone() + "/game/" + uuid;
     let req = client.get(&url).build().unwrap();
     client.send(req).on_response(on_game_response);
 }
@@ -316,6 +356,7 @@ fn islet_button_system(
     mut text_color_query: Query<&mut TextColor>,
     mut selected_islet: ResMut<SelectedIslet>,
     mut client: BevyReqwest,
+    config: Res<ConfigRes>,
 ) {
     const COLOR_SELECTED: Color = Color::Srgba(RED);
     const COLOR_HOVERED: Color = Color::Srgba(GREEN);
@@ -346,7 +387,7 @@ fn islet_button_system(
                         islet: select_islet.0,
                         entity,
                     });
-                    get_islet_image(&mut client, select_islet.0);
+                    get_islet_image(&config.0, &mut client, select_islet.0);
                     COLOR_SELECTED
                 }
                 Interaction::Hovered => COLOR_HOVERED,
@@ -379,6 +420,13 @@ fn update_islet_list_scroll(
     }
 }
 
+#[derive(States, Default, Debug, Hash, Eq, PartialEq, Clone)]
+enum AppState {
+    #[default]
+    Loading,
+    App,
+}
+
 #[wasm_bindgen]
 pub fn app() {
     App::new()
@@ -390,12 +438,20 @@ pub fn app() {
             }),
             ..default()
         }))
+        .init_state::<AppState>()
         .add_plugins(ReqwestPlugin::default())
+        .init_asset::<Config>()
+        .register_asset_loader(Json5AssetLoader::<Config>::new(&[".cfg.json5"]))
         .insert_resource(WinitSettings::desktop_app())
         .insert_resource(SelectedIslet(None))
-        .add_systems(Startup, setup_screen)
-        .add_systems(Startup, setup_sidebar.after(setup_screen))
-        .add_systems(Update, islet_button_system)
-        .add_systems(Update, update_islet_list_scroll)
+        .add_systems(Startup, load_config)
+        .add_systems(Update, wait_for_config.run_if(in_state(AppState::Loading)))
+        .add_systems(OnEnter(AppState::App), setup_screen.after(load_config))
+        .add_systems(OnEnter(AppState::App), setup_sidebar.after(setup_screen))
+        .add_systems(Update, islet_button_system.run_if(in_state(AppState::App)))
+        .add_systems(
+            Update,
+            update_islet_list_scroll.run_if(in_state(AppState::App)),
+        )
         .run();
 }

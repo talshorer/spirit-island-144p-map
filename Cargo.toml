@@ -9,7 +9,10 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 bevy = { version = "0.15", features = ["default_font", "wayland"] }
 bevy_mod_reqwest = "0.18.0"
+json5 = "0.4.1"
+serde = { version = "1.0.219", features = ["derive"] }
 strum = { version = "0.27.1", features = ["derive"] }
+thiserror = "2.0.12"
 wasm-bindgen = "0.2.100"
 
 # Enable a large amount of optimization in the dev profile for dependencies.

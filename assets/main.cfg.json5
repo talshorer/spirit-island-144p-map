@@ -1,0 +1,4 @@
+{
+  base_url: "https://api.cors.lol/?url=https://si.bitcrafter.net",
+  border_px: 1.0,
+}
