@@ -4491,8 +4491,11 @@ dependencies = [
  "bevy",
  "bevy_mod_reqwest",
  "json5",
+ "prettyplease",
+ "quote",
  "serde",
  "strum",
+ "syn",
  "thiserror 2.0.12",
  "wasm-bindgen",
 ]

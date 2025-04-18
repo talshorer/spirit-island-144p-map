@@ -16,6 +16,8 @@ use wasm_bindgen::prelude::*;
 
 use asset_json5::Json5AssetLoader;
 
+include!(concat!(env!("OUT_DIR"), "/islets.rs"));
+
 #[derive(Asset, TypePath, Deserialize)]
 struct Config {
     pub(crate) base_url: String,
@@ -41,114 +43,6 @@ struct Minimap;
 
 #[derive(Component)]
 struct TtsDisplay;
-
-#[derive(strum::Display, strum::EnumIter, Clone, Copy, PartialEq, Eq)]
-enum Islet {
-    Cactus,
-    Cheese,
-    Moon,
-    Butterfly,
-    Ghost,
-    Puzzle,
-    Rat,
-    Snake,
-    Infinity,
-    Mauritius,
-    Football,
-    Seedling,
-    Sunglasses,
-    Island,
-    Love,
-    Books,
-    Banana,
-    Wolf,
-    Pizza,
-    Hamburger,
-    Phoenix,
-    Balloon,
-    Bagel,
-    Cowboy,
-    Cookie,
-    Dragon,
-    Mountain,
-    Sheep,
-    Lightning,
-    Robot,
-}
-
-impl Islet {
-    const fn emoji(&self) -> &str {
-        match self {
-            Islet::Cactus => "🌵",
-            Islet::Cheese => "🧀",
-            Islet::Moon => "🌙",
-            Islet::Butterfly => "🦋",
-            Islet::Ghost => "👻",
-            Islet::Puzzle => "🧩",
-            Islet::Rat => "🐀",
-            Islet::Snake => "🐍",
-            Islet::Infinity => "♾️",
-            Islet::Mauritius => "🇲🇺",
-            Islet::Football => "⚽",
-            Islet::Seedling => "🌱",
-            Islet::Sunglasses => "😎",
-            Islet::Island => "🏝️",
-            Islet::Love => "💖",
-            Islet::Books => "📚",
-            Islet::Banana => "🍌",
-            Islet::Wolf => "🐺",
-            Islet::Pizza => "🍕",
-            Islet::Hamburger => "🍔",
-            Islet::Phoenix => "🐦‍🔥",
-            Islet::Balloon => "🎈",
-            Islet::Bagel => "🥯",
-            Islet::Cowboy => "🤠",
-            Islet::Cookie => "🍪",
-            Islet::Dragon => "🐉",
-            Islet::Mountain => "⛰️",
-            Islet::Sheep => "🐑",
-            Islet::Lightning => "⚡",
-            Islet::Robot => "🤖",
-        }
-    }
-
-    fn screenshot_method(&self) -> ScreenshotMethod {
-        use ScreenshotMethod as S;
-
-        match self {
-            Islet::Cactus => S::Bitcrafter("c93a3401-57c2-4f82-91e7-84453cea5c44"),
-            Islet::Cheese => S::Bitcrafter("39d059ee-d8b6-4eca-8f83-e39e418921eb"),
-            Islet::Moon => S::Bitcrafter("9ce0657c-ab9d-42c1-b48a-ee86ddd49fbf"),
-            Islet::Butterfly => S::Bitcrafter("9291ed98-b15c-464c-ae58-a206751e85f1"),
-            Islet::Ghost => S::Bitcrafter("1e5881ce-834d-488e-b3a9-884dcbbac257"),
-            Islet::Puzzle => S::Bitcrafter("c79ad3f5-8836-4c11-8888-e34a0968f31f"),
-            Islet::Rat => S::Bitcrafter("8ff037d8-2f40-4b56-8526-daa82310fd20"),
-            Islet::Snake => S::Bitcrafter("698c01fd-36af-4e5b-b689-0ece85be74f3"),
-            Islet::Infinity => S::Bitcrafter("c212aa05-8394-44eb-bb59-52bc54c64920"),
-            Islet::Mauritius => S::Bitcrafter("172d4b18-c734-495a-b456-3d1a2b4cf6f1"),
-            Islet::Football => S::Bitcrafter("36b43f3b-4ac9-4931-af01-205a0dd51615"),
-            Islet::Seedling => S::Bitcrafter("eb617149-9229-4212-91ce-6ee760b23325"),
-            Islet::Sunglasses => S::AbandonedIslet,
-            Islet::Island => S::AbandonedIslet,
-            Islet::Love => S::AbandonedIslet,
-            Islet::Books => S::Bitcrafter("c27f4831-d688-47c4-ac8b-f092ea527e8c"),
-            Islet::Banana => S::Bitcrafter("9c07308b-a526-4276-b477-9ec6f0f11a24"),
-            Islet::Wolf => S::Bitcrafter("fe482166-68c4-4a84-a6f3-03a9ef47bcd4"),
-            Islet::Pizza => S::Bitcrafter("e7264e57-7f5d-47b4-8975-b7c1d801ead8"),
-            Islet::Hamburger => S::Bitcrafter("7e8bbce0-9fcb-49b8-8e2a-ebe75d3e35c6"),
-            Islet::Phoenix => S::Bitcrafter("58c681c0-a806-41d9-968a-d46b45b56e8c"),
-            Islet::Balloon => S::Bitcrafter("22787c21-a6e7-4df8-9032-0a0f9dc60d25"),
-            Islet::Bagel => S::Bitcrafter("3b7e540b-cfea-48d1-8ce2-3e2a52ba9344"),
-            Islet::Cowboy => S::Bitcrafter("b16152f5-cc8c-45ec-8eb2-7941f4b59792"),
-            Islet::Cookie => S::Bitcrafter("1f8732fd-13c1-471b-b5e8-691e574e3445"),
-            Islet::Dragon => S::Bitcrafter("2a5e6973-217c-45ef-9218-e23d6d488839"),
-            Islet::Mountain => S::Bitcrafter("cf7a95fd-d323-4a73-b8fa-eda66b10dd64"),
-            Islet::Sheep => S::AbandonedIslet,
-            Islet::Lightning => S::AbandonedIslet,
-            Islet::Robot => S::AbandonedIslet,
-        }
-    }
-}
 
 enum ScreenshotMethod<'a> {
     Bitcrafter(&'a str),
