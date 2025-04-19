@@ -1,0 +1,13 @@
+{
+  "name": "spirit-island-144p-map",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "spirit_island_144p_map_bg.wasm",
+    "spirit_island_144p_map.js"
+  ],
+  "main": "spirit_island_144p_map.js",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
