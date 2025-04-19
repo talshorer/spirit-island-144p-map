@@ -2,7 +2,7 @@ mod asset_json5;
 
 use bevy::{
     asset::RenderAssetUsages,
-    color::palettes::css::{GREEN, RED},
+    color::palettes::css::{BLUE, GREEN, RED},
     image::{CompressedImageFormats, ImageSampler, ImageType},
     input::mouse::{MouseScrollUnit, MouseWheel},
     picking::focus::HoverMap,
@@ -176,15 +176,24 @@ fn setup_screen(mut commands: Commands, asset_server: Res<AssetServer>, config: 
                 },
                 Sidebar,
             ));
-            parent.spawn((
-                Node {
-                    border: config.0.border(),
+            parent
+                .spawn(Node {
+                    flex_direction: FlexDirection::Column,
+                    flex_shrink: 1.0,
+                    flex_grow: 1.0,
                     ..default()
-                },
-                BorderColor(RED.into()),
-                TtsDisplay,
-                ImageNode::new(asset_server.load("bigmap.png")),
-            ));
+                })
+                .with_child((
+                    Node {
+                        border: config.0.border(),
+                        max_width: Val::Percent(80.0),
+                        max_height: Val::Percent(100.0),
+                        ..default()
+                    },
+                    BorderColor(BLUE.into()),
+                    TtsDisplay,
+                    ImageNode::new(asset_server.load("bigmap.png")),
+                ));
         });
 }
 
