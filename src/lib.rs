@@ -1,5 +1,7 @@
 mod asset_json5;
 
+use std::ops::Add;
+
 use bevy::{
     asset::RenderAssetUsages,
     color::palettes::css::{BLUE, GREEN, RED},
@@ -197,6 +199,21 @@ fn setup_screen(mut commands: Commands, asset_server: Res<AssetServer>, config: 
         });
 }
 
+fn blueness(image: &Image) -> bool {
+    let normalized_sum = (0..image.width())
+        .map(|x| {
+            let x = (0..image.height())
+                .map(|y| image.get_color_at(x, y).unwrap().to_srgba())
+                .reduce(Add::add)
+                .unwrap();
+            x
+        })
+        .reduce(Add::add)
+        .unwrap()
+        / ((image.width() * image.height()) as f32);
+    normalized_sum.red < 0.7 && normalized_sum.green < 0.7 && normalized_sum.blue > 0.4
+}
+
 fn on_img_response(
     trigger: Trigger<ReqwestResponseEvent>,
     mut tts_display_query: Query<(&mut ImageNode, &TtsDisplay)>,
@@ -205,17 +222,18 @@ fn on_img_response(
     let response = trigger.event();
     let data = response.body().iter().as_slice();
     let (mut image_node, _) = tts_display_query.single_mut();
-    image_node.image = images.add(
-        Image::from_buffer(
-            data,
-            ImageType::Format(ImageFormat::Png),
-            CompressedImageFormats::all(),
-            true,
-            ImageSampler::Default,
-            RenderAssetUsages::default(),
-        )
-        .unwrap(),
-    );
+    let image = Image::from_buffer(
+        data,
+        ImageType::Format(ImageFormat::Png),
+        CompressedImageFormats::all(),
+        true,
+        ImageSampler::Default,
+        RenderAssetUsages::default(),
+    )
+    .unwrap();
+    if blueness(&image) {
+        image_node.image = images.add(image);
+    }
 }
 
 fn on_game_response(
@@ -227,17 +245,20 @@ fn on_game_response(
 
     let response = trigger.event();
     let data = response.as_str().unwrap();
-    let imgsrc = data
-        .split("\n")
-        .find_map(|line| {
-            line.find(SEARCH_FOR)
-                .map(|idx| &line[(idx + SEARCH_FOR.len())..])
-                .map(|line| &line[..line.find("\" ").unwrap()])
-        })
-        .unwrap();
-    let url = config.0.base_url.clone() + imgsrc;
-    let req = client.get(&url).build().unwrap();
-    client.send(req).on_response(on_img_response);
+    for line in data.split("\n") {
+        if let Some(imgsrc) = line
+            .find(SEARCH_FOR)
+            .map(|idx| &line[(idx + SEARCH_FOR.len())..])
+            .map(|line| &line[..line.find("\" ").unwrap()])
+        {
+            if !imgsrc.starts_with("/screenshot") {
+                continue;
+            }
+            let url = config.0.base_url.clone() + imgsrc;
+            let req = client.get(&url).build().unwrap();
+            client.send(req).on_response(on_img_response);
+        }
+    }
 }
 
 fn get_islet_image(config: &Config, client: &mut BevyReqwest, islet: Islet) {
