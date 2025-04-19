@@ -210,7 +210,7 @@ fn on_img_response(
             data,
             ImageType::Format(ImageFormat::Png),
             CompressedImageFormats::all(),
-            false,
+            true,
             ImageSampler::Default,
             RenderAssetUsages::default(),
         )
